@@ -1,9 +1,13 @@
 #ifndef FRAME_TIMER_H
 #define FRAME_TIMER_H
 
+#include "ofMain.h"
 
 class FrameTimer{
 public:
+	
+	ofEvent<int> finish_event;
+	
 	FrameTimer(){
 		setup(0,0);
 	}
@@ -22,10 +26,16 @@ public:
 	void reset(){
 		started=false;
 		ani_t=-delay;
+		event_raised=false;
 	}
 	void update(float dt_){
 		if(!started) return;
 		if(ani_t<due) ani_t+=dt_;
+		if(!event_raised && ani_t>=due){
+			event_raised=true;
+			int data=1;
+			ofNotifyEvent(finish_event,data);
+		}
 	}
 	float val(){
 		if(!started) return 0;
@@ -42,10 +52,15 @@ public:
 		reset();
 		start();
 	}
+	
+	
 private:
 	float ani_t;
 	float due,delay;
 	bool started;
+	bool event_raised;
+	//bool loop;
+
 	void setup(float len_,float delay_){
 		due=len_;
 		delay=delay_;

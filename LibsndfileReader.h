@@ -41,7 +41,11 @@ public:
 			_filename=file_;
 		
 			initialized=true;
-		}else initialized=false;
+		}else{
+			initialized=false;
+			ofLog()<<"load file error!";
+		
+		}
 
 	}
 	int read(float *buffer_, int nsample){
