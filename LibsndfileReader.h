@@ -16,8 +16,8 @@ public:
 	
 		if(initialized){
 			if(file_!= _filename){
-				close();
-				openFile(file_);
+				//close();
+				//openFile(file_);
 			}else{
 				_sndfile->seek(0,SEEK_SET);
 			}

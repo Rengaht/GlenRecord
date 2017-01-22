@@ -26,7 +26,7 @@ public:
 		start_count=start_;
 		num=count_;	
 		
-		for(int i=start_count;i<num;++i){
+		for(int i=start_count;i<=num;++i){
 			string name_=filename_+nf("%05d",i)+".jpg";
 			img.push_back(ofImage(name_));
 			if(i%100==0 || i==num-1) ofLog()<<"Load File: "<<name_;
@@ -47,8 +47,9 @@ public:
 	}
 	void update(float dm){
 		if(pause) return;
+		if(index>=num) index=index-num+start_count;
+
 		if(index<num) index+=dm*fps;
-	//	if(index>num-1) index-=(num-1);
 	}
 	void setPause(bool p){
 		pause=p;

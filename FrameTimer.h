@@ -27,14 +27,23 @@ public:
 		started=false;
 		ani_t=-delay;
 		event_raised=false;
+		num_cycle=0;
 	}
 	void update(float dt_){
 		if(!started) return;
 		if(ani_t<due) ani_t+=dt_;
-		if(!event_raised && ani_t>=due){
+		if(ani_t>=due){
+			
+			if(!continuous && event_raised) return;
+
 			event_raised=true;
-			int data=1;
+			num_cycle++;
+
+			int data=num_cycle;
 			ofNotifyEvent(finish_event,data);
+			
+			if(continuous) ani_t=0;
+
 		}
 	}
 	float val(){
@@ -52,18 +61,25 @@ public:
 		reset();
 		start();
 	}
-	
-	
+	int num(){
+		return num_cycle;
+	}
+	void setContinuous(bool cont){
+		continuous=cont;
+	}
 private:
 	float ani_t;
 	float due,delay;
 	bool started;
 	bool event_raised;
 	//bool loop;
+	int num_cycle;
+	bool continuous;
 
 	void setup(float len_,float delay_){
 		due=len_;
 		delay=delay_;
+		continuous=true;
 		reset();
 	}
 

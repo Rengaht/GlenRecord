@@ -6,11 +6,13 @@
 #include "HttpFormManager.h"
 #include "ofxQRcode.h"
 #include "ofxOsc.h"
+#include "ofxSoundFile.h"
+
 //#include "bmFFT.h"
 //#include "ofxFft.h"
 #include "ofxBeat.h"
 
-#include "LibsndfileReader.h"
+//#include "LibsndfileReader.h"
 #include "Params.h"
 #include "FrameTimer.h"
 #include "StringUtil.h"
@@ -53,15 +55,19 @@ class ofApp : public ofBaseApp{
 		void calcVolume(float *data,int buffersize,int nChannels);
 
 		vector<float> record_float;
-		int read_record;
+		int read_record,num_record;
 
 		ofxLibsndFileRecorder audio_recorder;
+		//ofSoundPlayer sound_player;
+		ofxSoundFile *sound_file;
+
 		int rec_start;
 		string last_record;
-		FrameTimer rec_timer,qrcode_timer,finish_timer,breath_timer;
-	  	
-		int cur_millis;
+		FrameTimer qrcode_timer,breath_timer;
+	  	bool record_once;
 
+		int cur_millis;
+		
 
 		//GPIO gpio16,gpio20,gpio21;
 		//rpiPWM1 *pwm;
@@ -69,7 +75,7 @@ class ofApp : public ofBaseApp{
 		int readSerial();
 		void writeSerial(string val_);
 
-		enum MODE{SLEEP,REC,FINISH,QRCODE,STORED,PLAY};
+		enum MODE{SLEEP,HINT,REC,BLINK,FINISH,QRCODE,STORED,PLAY};
 		MODE mode;
 		MODE next_mode;
 		bool playing;
@@ -79,7 +85,7 @@ class ofApp : public ofBaseApp{
 		void drawMode(MODE mode_,float t_);
 
 
-		LibsndfileReader wav_reader;
+		//LibsndfileReader wav_reader;
 		ofSoundStream out_sound_stream;		
 		int play_start;
 	
@@ -109,9 +115,17 @@ class ofApp : public ofBaseApp{
 		
 		ImageSeq back_seq;
 		ImageSeq logo_seq;
-		vector<ofImage> front_image;
-		
-		FrameTimer front_timer;
+		ofImage front_image[8];
+		ofImage count_image[10];
+
+	//	FrameTimer front_timer;
+		FrameTimer hint_timer;
 		FrameTimer count_timer;
+		FrameTimer blink_timer;
+		FrameTimer finish_timer;
+		
+		void onHintTimerEnd(int &data);
+		void onCountTimerEnd(int &data);
+		void onBlinkTimerEnd(int &data);
 
 };
