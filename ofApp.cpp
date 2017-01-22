@@ -76,12 +76,18 @@ void ofApp::update(){
 	beat.update(cur_millis);
 //	breath_timer.update(dm);
 
-	if(mode!=SLEEP){
-		scaled_vol=ofMap(smooth_vol,0,0.17,0,1.0,true);
-		writeSerial(ofToString(int(ofMap(ofClamp(scaled_vol,0.5,1),0.5,1,10.0,255.0))));
-	}else{
+	if(recording || playing){
+		scaled_vol=smooth_vol*10.0*255.0;//ofMap(smooth_vol,0,0.1,0,1.0,true);
+		if(scaled_vol<35) scaled_vol=5;
+		else scaled_vol=(scaled_vol-35)*20.0+35;
+
+		writeSerial(ofToString(int(ofClamp(scaled_vol,0.0,255.0))));
+	}else if(mode==MODE::SLEEP){
 		writeSerial(ofToString(int(255.0*sin(3.14*breath_timer.val()))));
 	}
+
+	if(scaled_vol<40) scaled_vol=0;
+
 
 	int key_=readSerial();
 	if(key_==4) resetSleep();
@@ -438,6 +444,8 @@ void ofApp::playRecord(){
 void ofApp::stopPlayRecord(){
 	
 	if(!playing) return;
+	
+	writeSerial(ofToString(255));
 
 	ofLog()<<"End!";
 	playing=false;	 	
@@ -516,27 +524,32 @@ void ofApp::startMode(MODE mode_){
 		case SLEEP:
 			logo_seq.reset();
 			logo_seq.start();
-			writeSerial("a");
+			//writeSerial("a");
 			break;
 		case HINT:
+			writeSerial(ofToString(128));
 			//hint_timer.restart();
 			break;
 		case REC:
+			writeSerial(ofToString(128));
 		//	count_timer.restart();
 			//back_seq.setIndex(284);
 			//startRecord();
 			break;
 		case FINISH:
 			finish_timer.restart();
+			writeSerial(ofToString(255));
 			break;
 		case QRCODE:
-			writeSerial("b");
+			//writeSerial("b");
+			writeSerial(ofToString(255));
 			//uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
 			//back_seq.setIndex(688);
 			//back_seq.setPause(true);
-			//qrcode_timer.restart();
+			qrcode_timer.restart();
 			break;
 		case STORED:
+			writeSerial(ofToString(255));
 			//back_seq.setIndex(697);
 			break;
 		case PLAY:
@@ -563,7 +576,7 @@ void ofApp::onTransitionEnd(int &e){
 				startRecord();
 				break;
 			case QRCODE:
-				qrcode_timer.restart();
+				//qrcode_timer.restart();
 				uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
 			
 				cout<<"get qrcode!"<<endl;
