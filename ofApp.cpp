@@ -25,7 +25,7 @@ void ofApp::setup(){
 	//out_sound_stream.stop();
 
 
-	serial.setup("/dev/ttyACM0",9600);
+	serial.setup("/dev/ttyUSB0",9600);
 	if(serial.isInitialized()) ofLog()<<"Serial Initialized!!";
 	else ofLog()<<"Serial Fail!";
 	
@@ -35,16 +35,14 @@ void ofApp::setup(){
 	ofAddListener(upload_manager.formResponseEvent,this,&ofApp::newResponse);
 
 	//scene videos
-	back_seq=ImageSeq("src/back/video_",309,24,286);
-//	back_seq=ImageSeq("src/back/video_",287,24,286);
-	logo_seq=ImageSeq("src/logo/video_",181,24,104);
-//	logo_seq=ImageSeq("src/logo/video_",105,24,104);
+	back_seq=ImageSeq("src/back/back",119,24,0,".jpg");
+	logo_seq=ImageSeq("src/logo/logo",104,24,0,".png");
 
-	for(int i=0;i<8;++i){
-		front_image[i].load("src/front_"+ofToString(i)+".jpg");
+	for(int i=0;i<9;++i){
+		front_image[i].load("src/front_"+ofToString(i)+".png");
 	}
 	for(int i=0;i<10;++i){
-		count_image[i].load("src/count_"+ofToString(i)+".jpg");
+		count_image[i].load("src/count_"+ofToString(i)+".png");
 	}
 	
 	hint_timer=FrameTimer(2000);
@@ -56,7 +54,7 @@ void ofApp::setup(){
 	blink_timer=FrameTimer(500);
 	ofAddListener(blink_timer.finish_event,this,&ofApp::onBlinkTimerEnd);
 	
-	finish_timer=FrameTimer(1000);
+	glow_timer=FrameTimer(2000);
 	
 	
 
@@ -77,16 +75,16 @@ void ofApp::update(){
 //	breath_timer.update(dm);
 
 	if(recording || playing){
-		scaled_vol=smooth_vol*10.0*255.0;//ofMap(smooth_vol,0,0.1,0,1.0,true);
-		if(scaled_vol<35) scaled_vol=5;
-		else scaled_vol=(scaled_vol-35)*20.0+35;
+		scaled_vol=smooth_vol*60.0*255.0;//ofMap(smooth_vol,0,0.1,0,1.0,true);
+		//if(scaled_vol<35) scaled_vol=5;
+		//else scaled_vol=(scaled_vol-35)*20.0+35;
 
-		writeSerial(ofToString(int(ofClamp(scaled_vol,0.0,255.0))));
+		writeSerial(ofToString(int(ofClamp(scaled_vol,160.0,255.0))));
 	}else if(mode==MODE::SLEEP){
 		writeSerial(ofToString(int(255.0*sin(3.14*breath_timer.val()))));
 	}
 
-	if(scaled_vol<40) scaled_vol=0;
+	//if(scaled_vol<40) scaled_vol=0;
 
 
 	int key_=readSerial();
@@ -119,8 +117,8 @@ void ofApp::update(){
 			break;
 		case FINISH:
 			//if(fr>=687) back_seq.setIndex(662);
-			finish_timer.update(dm);
-			if(!transition_){
+			glow_timer.update(dm);
+			if(!transition_ && !recording && !playing){
 				if(key_==1){
 					if(!record_once){
 						record_once=true;
@@ -149,6 +147,7 @@ void ofApp::update(){
 		case PLAY:
 			break;
 		case STORED:
+			glow_timer.update(dm);
 			//if(fr>=705) back_seq.setIndex(697);
 			//key_=readSerial();
 			if(!transition_)
@@ -243,26 +242,30 @@ void ofApp::draw(){
 
 
 	float t_=transition_timer.val();
-	if(mode==next_mode) drawMode(mode,t_);
-	else drawMode(mode,1.0f-t_);
+	if(mode==next_mode) drawMode(mode,1.0,false);
+	else drawMode(mode,1.0f-t_,true);
 
 }
 
-void ofApp::drawMode(MODE mode_,float t){
+void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
-	ofPushStyle();
-	ofSetColor(255,255.0f*t);
 	float h=375;
 	float w=h*1.2;
-	back_seq.getCurFrame().draw(0,0,h*1.2,h);
 
+	back_seq.getCurFrame().draw(0,0,h*1.2,h);
+	
+	ofSetColor(255,255.0f*t);
+	
+	ofPushStyle();
 	ofPushMatrix();
-	int width=ofGetWidth();
-	int height=ofGetHeight();
-	float tt=0;
-	ofTranslate(w/2,h/2);
-	ofScale(t,t);
-	ofTranslate(-w/2,-h/2);
+//	int width=ofGetWidth();
+//	int height=ofGetHeight();
+	float tt=t;
+//	ofTranslate(w/2,h/2);
+//	ofScale(t,t);
+//	ofTranslate(-w/2,-h/2);
+	
+	bool fade_in=(!fade_out && t<1.0);
 
 	switch(mode_){
 		case SLEEP:
@@ -270,25 +273,35 @@ void ofApp::drawMode(MODE mode_,float t){
 			ofDrawBitmapString("SLEEP, red to rec",20,20);
 			break;
 		case HINT:
-			front_image[0].draw(0,0,w,h);
-			tt=1.0-hint_timer.val();
 			ofPushStyle();
-				ofSetColor(255,255.0*tt);
-				front_image[hint_timer.num()+1].draw(0,0,w,h);
+			if(fade_out) ofSetColor(255.0);
+				front_image[0].draw(0,0,w,h);
 			ofPopStyle();
+
+			if(!fade_in && !fade_out){
+				tt*=1.0-hint_timer.eval();
+				ofPushStyle();
+					ofSetColor(255,255.0*tt);
+					front_image[hint_timer.num()+1].draw(0,0,w,h);
+				ofPopStyle();
+			}
 			break;
 		case REC:
-			if(recording){
-				tt=1.0-count_timer.val();
-				ofDrawBitmapString("REC",20,20);
+			ofPushStyle();
+			if(fade_in) ofSetColor(255.0);
 				front_image[0].draw(0,0,w,h);
+			ofPopStyle();
+
+			if(recording){
+				tt*=1.0-count_timer.eval();
+				ofDrawBitmapString("REC",20,20);
 				ofPushStyle();
 					ofSetColor(255,255.0*tt);
 					count_image[(int)ofClamp(9-count_timer.num(),0,9)].draw(0,0,w,h);
 				ofPopStyle();
 			}else{
 				if(blink_timer.val()>0){
-					tt=1.0-blink_timer.val();
+					tt*=1.0-blink_timer.eval();
 					ofPushStyle();
 					ofSetColor(255,255.0*tt);
 						front_image[3].draw(0,0,w,h);
@@ -298,28 +311,32 @@ void ofApp::drawMode(MODE mode_,float t){
 			break;
 			
 		case FINISH:
-			front_image[0].draw(0,0,w,h);
-			t=finish_timer.val();
+			tt*=sin(3.14*glow_timer.val());
 			ofDrawBitmapString("FINSH",20,20);
 			ofPushStyle();
-			ofSetColor(255,255.0*t);
 				front_image[4].draw(0,0,w,h);
-			ofSetColor(255,255.0*(1.0-t));
+				ofSetColor(255,255.0*(1.0-tt));
 				front_image[5].draw(0,0,w,h);
 			ofPopStyle();
 			break;
 		case QRCODE: 
-			front_image[6].draw(0,0,w,h);
-			ofSetColor(255,255,255);
-			ofPushMatrix();
-			ofScale(h/320.0,h/320.0);
-				if(qrcode.isAllocated()) qrcode.draw(89,66,203,203);
-				else ofDrawRectangle(89,66,203,203);
-			ofPopMatrix();
-			ofDrawBitmapString("QRCODE "+ofToString(qrcode_timer.count()),20,20);
+			if(qrcode.isAllocated()){
+				front_image[6].draw(0,0,w,h);
+				ofSetColor(255,255,255);
+				ofPushMatrix();
+				ofScale(h/320.0,h/320.0);
+					qrcode.draw(89,66,203,203);
+				ofPopMatrix();
+				ofDrawBitmapString("QRCODE "+ofToString(qrcode_timer.count()),20,20);
+			}
 			break;
 		case STORED:
 			front_image[7].draw(0,0,w,h);
+			tt*=sin(3.14*glow_timer.val());
+			ofPushStyle();
+			ofSetColor(255,255.0*tt);
+				front_image[8].draw(0,0,w,h);
+			ofPopStyle();
 			//qrcode_back.draw(0,0,width,height);
 			ofDrawBitmapString("STORE, white to play",20,20);
 			break;
@@ -537,7 +554,7 @@ void ofApp::startMode(MODE mode_){
 			//startRecord();
 			break;
 		case FINISH:
-			finish_timer.restart();
+			glow_timer.restart();
 			writeSerial(ofToString(255));
 			break;
 		case QRCODE:
@@ -549,6 +566,7 @@ void ofApp::startMode(MODE mode_){
 			qrcode_timer.restart();
 			break;
 		case STORED:
+			glow_timer.restart();
 			writeSerial(ofToString(255));
 			//back_seq.setIndex(697);
 			break;

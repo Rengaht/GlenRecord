@@ -21,13 +21,13 @@ private:
 	}
 public:
 	ImageSeq(){}
-	ImageSeq(string filename_,int count_,int fps_,int start_){
+	ImageSeq(string filename_,int count_,int fps_,int start_,string ext_){
 		
 		start_count=start_;
 		num=count_;	
 		
 		for(int i=start_count;i<=num;++i){
-			string name_=filename_+nf("%05d",i)+".jpg";
+			string name_=filename_+nf("%03d",i)+ext_;
 			img.push_back(ofImage(name_));
 			if(i%100==0 || i==num-1) ofLog()<<"Load File: "<<name_;
 		}

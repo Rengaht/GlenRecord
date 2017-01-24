@@ -53,6 +53,10 @@ public:
 
 		return ofClamp(ani_t/due,0,1);
 	}
+	float eval(){
+		float v=val();
+		return v*v;
+	}
 	int count(){
 		if(ani_t<0) return ceil(abs(ani_t/1000.0));
 		else return floor((due-ani_t)/1000.0);

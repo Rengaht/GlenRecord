@@ -82,7 +82,7 @@ class ofApp : public ofBaseApp{
 		void closeMode(MODE next_mode_);
 		void startMode(MODE mode_);
 		
-		void drawMode(MODE mode_,float t_);
+		void drawMode(MODE mode_,float t_,bool fade_out);
 
 
 		//LibsndfileReader wav_reader;
@@ -122,7 +122,7 @@ class ofApp : public ofBaseApp{
 		FrameTimer hint_timer;
 		FrameTimer count_timer;
 		FrameTimer blink_timer;
-		FrameTimer finish_timer;
+		FrameTimer glow_timer;
 		
 		void onHintTimerEnd(int &data);
 		void onCountTimerEnd(int &data);
