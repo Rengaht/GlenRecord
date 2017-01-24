@@ -115,7 +115,7 @@ class ofApp : public ofBaseApp{
 		
 		ImageSeq back_seq;
 		ImageSeq logo_seq;
-		ofImage front_image[8];
+		ofImage front_image[9];
 		ofImage count_image[10];
 
 	//	FrameTimer front_timer;

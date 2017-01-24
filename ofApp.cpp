@@ -241,8 +241,8 @@ void ofApp::draw(){
 */
 
 
-	float t_=transition_timer.val();
-	if(mode==next_mode) drawMode(mode,1.0,false);
+	float t_=transition_timer.eval();
+	if(mode==next_mode) drawMode(mode,t_,false);
 	else drawMode(mode,1.0f-t_,true);
 
 }
@@ -254,9 +254,10 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
 	back_seq.getCurFrame().draw(0,0,h*1.2,h);
 	
-	ofSetColor(255,255.0f*t);
 	
 	ofPushStyle();
+	ofSetColor(255,255.0f*t);
+	
 	ofPushMatrix();
 //	int width=ofGetWidth();
 //	int height=ofGetHeight();
@@ -315,14 +316,13 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			ofDrawBitmapString("FINSH",20,20);
 			ofPushStyle();
 				front_image[4].draw(0,0,w,h);
-				ofSetColor(255,255.0*(1.0-tt));
+				ofSetColor(255,255.0*tt);
 				front_image[5].draw(0,0,w,h);
 			ofPopStyle();
 			break;
 		case QRCODE: 
 			if(qrcode.isAllocated()){
 				front_image[6].draw(0,0,w,h);
-				ofSetColor(255,255,255);
 				ofPushMatrix();
 				ofScale(h/320.0,h/320.0);
 					qrcode.draw(89,66,203,203);
@@ -425,6 +425,8 @@ void ofApp::stopRecord(){
 }
 
 void ofApp::playRecord(){
+	
+	if(mode!=MODE::STORED && mode!=MODE::FINISH) return;
 	if(playing) return;
 
 	ofLog()<<"Play file !";
