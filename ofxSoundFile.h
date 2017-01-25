@@ -66,6 +66,11 @@ public:
 	bool isLoaded();
 	string getPath();
 
+
+//reng_20170125
+	void setPlay(bool play_);
+	bool isPlaying();
+
 private:
 	
 	int sfReadFile(ofSoundBuffer & buffer);
@@ -105,5 +110,11 @@ private:
 	string path;
 	bool bCompressed;
 	bool bLoaded;
+
+
+
+//reng070125
+	bool playing;
+
 };
 

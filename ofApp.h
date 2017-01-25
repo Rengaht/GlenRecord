@@ -128,4 +128,7 @@ class ofApp : public ofBaseApp{
 		void onCountTimerEnd(int &data);
 		void onBlinkTimerEnd(int &data);
 
+
+		ofxSoundFile sound_fx[1];
+		
 };

@@ -20,12 +20,9 @@ void ofApp::setup(){
 
 	last_record=Param::val()->last_record;
 	
-	out_sound_stream.printDeviceList();
-	out_sound_stream.setup(this,2,1,SAMPLE_RATE,BUFFER_SIZE,4);
-	//out_sound_stream.stop();
 
 
-	serial.setup("/dev/ttyUSB0",9600);
+	serial.setup("/dev/ttyACM0",9600);
 	if(serial.isInitialized()) ofLog()<<"Serial Initialized!!";
 	else ofLog()<<"Serial Fail!";
 	
@@ -45,7 +42,7 @@ void ofApp::setup(){
 		count_image[i].load("src/count_"+ofToString(i)+".png");
 	}
 	
-	hint_timer=FrameTimer(2000);
+	hint_timer=FrameTimer(3000);
 	ofAddListener(hint_timer.finish_event,this,&ofApp::onHintTimerEnd);
 	
 	count_timer=FrameTimer(1000);
@@ -62,8 +59,18 @@ void ofApp::setup(){
 	transition_timer.setContinuous(false);
 	ofAddListener(transition_timer.finish_event,this,&ofApp::onTransitionEnd);
 
+
+	sound_fx[0].load("src/sound/button.wav");
+	//sound_fx[1].load("src/sound/10sec.wav");
+	//sound_fx[2].load("src/sound/go.wav");
+	//sound_fx[3].load("src/sound/blink.wav");
+	
+	out_sound_stream.printDeviceList();
+	out_sound_stream.setup(this,2,1,SAMPLE_RATE,BUFFER_SIZE,4);
+	//out_sound_stream.stop();
+	
 	startMode(MODE::SLEEP);
-	writeSerial("a");
+//	writeSerial("a");
 }
 
 //--------------------------------------------------------------
@@ -75,7 +82,7 @@ void ofApp::update(){
 //	breath_timer.update(dm);
 
 	if(recording || playing){
-		scaled_vol=smooth_vol*60.0*255.0;//ofMap(smooth_vol,0,0.1,0,1.0,true);
+		scaled_vol=smooth_vol*250.0*255.0;//ofMap(smooth_vol,0,0.1,0,1.0,true);
 		//if(scaled_vol<35) scaled_vol=5;
 		//else scaled_vol=(scaled_vol-35)*20.0+35;
 
@@ -105,7 +112,10 @@ void ofApp::update(){
 			breath_timer.update(dm);
 
 			logo_seq.update(dm);
-			if(key_==1) closeMode(MODE::HINT);
+			if(key_==1){
+				closeMode(MODE::HINT);
+				sound_fx[0].setPlay(true);
+			}
 			break;
 		case HINT:
 			hint_timer.update(dm);
@@ -122,12 +132,15 @@ void ofApp::update(){
 				if(key_==1){
 					if(!record_once){
 						record_once=true;
-						closeMode(MODE::REC);
+						closeMode(MODE::HINT);
+						sound_fx[0].setPlay(true);
 					}
 				}else if(key_==2){
 					playRecord();
+					sound_fx[0].setPlay(true);			
 				}else if(key_==3){
 					closeMode(MODE::QRCODE);
+					sound_fx[0].setPlay(true);			
 				}
 			}
 			break;
@@ -151,7 +164,10 @@ void ofApp::update(){
 			//if(fr>=705) back_seq.setIndex(697);
 			//key_=readSerial();
 			if(!transition_)
-				if(key_==2) playRecord();
+				if(key_==2){
+					playRecord();
+					sound_fx[0].setPlay(true);
+				}
 			break;
 	}
 	
@@ -249,8 +265,12 @@ void ofApp::draw(){
 
 void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
-	float h=375;
+	float h=480;
 	float w=h*1.2;
+	float offx=ofGetWidth()/2.0-w/2.0+Param::val()->screen_offsetx;
+
+	ofPushMatrix();
+	ofTranslate(offx,0);
 
 	back_seq.getCurFrame().draw(0,0,h*1.2,h);
 	
@@ -271,7 +291,7 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 	switch(mode_){
 		case SLEEP:
 			logo_seq.getCurFrame().draw(0,0,w,h);
-			ofDrawBitmapString("SLEEP, red to rec",20,20);
+			//ofDrawBitmapString("SLEEP, red to rec",20,20);
 			break;
 		case HINT:
 			ofPushStyle();
@@ -295,7 +315,7 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
 			if(recording){
 				tt*=1.0-count_timer.eval();
-				ofDrawBitmapString("REC",20,20);
+				//ofDrawBitmapString("REC",20,20);
 				ofPushStyle();
 					ofSetColor(255,255.0*tt);
 					count_image[(int)ofClamp(9-count_timer.num(),0,9)].draw(0,0,w,h);
@@ -313,7 +333,7 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			
 		case FINISH:
 			tt*=sin(3.14*glow_timer.val());
-			ofDrawBitmapString("FINSH",20,20);
+			//ofDrawBitmapString("FINSH",20,20);
 			ofPushStyle();
 				front_image[4].draw(0,0,w,h);
 				ofSetColor(255,255.0*tt);
@@ -327,7 +347,7 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 				ofScale(h/320.0,h/320.0);
 					qrcode.draw(89,66,203,203);
 				ofPopMatrix();
-				ofDrawBitmapString("QRCODE "+ofToString(qrcode_timer.count()),20,20);
+				//ofDrawBitmapString("QRCODE "+ofToString(qrcode_timer.count()),20,20);
 			}
 			break;
 		case STORED:
@@ -338,14 +358,16 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 				front_image[8].draw(0,0,w,h);
 			ofPopStyle();
 			//qrcode_back.draw(0,0,width,height);
-			ofDrawBitmapString("STORE, white to play",20,20);
+			//ofDrawBitmapString("STORE, white to play",20,20);
 			break;
 	}
 
-	ofDrawBitmapString(ofToString(ofGetFrameRate()),10,10);
-	ofDrawBitmapString(ofToString(scaled_vol),10,30);
+	//ofDrawBitmapString(ofToString(ofGetFrameRate()),10,10);
+	//ofDrawBitmapString(ofToString(scaled_vol),10,30);
 	ofPopMatrix();
 	ofPopStyle();
+
+	ofPopMatrix();
 
 }
 
@@ -417,11 +439,17 @@ void ofApp::stopRecord(){
 	
 	if(!recording) return;
 
-	ofLog()<<"Stop!";
-	audio_recorder.finalize();
-
-	ofLog()<<"Finish! #buffer= "<<read_record;
 	recording=false;
+	
+	ofLog()<<"Stop!";
+
+	audio_recorder.finalize();
+	
+
+
+	
+	ofLog()<<"Finish! #buffer= "<<read_record;
+	//recording=false;
 }
 
 void ofApp::playRecord(){
@@ -439,8 +467,7 @@ void ofApp::playRecord(){
 			playing=true;
 			read_record=0;
 			return;
-		}
-		else{
+		}else{
 			sound_file->close();
 			delete sound_file;
 			sound_file=NULL;
@@ -472,8 +499,29 @@ void ofApp::stopPlayRecord(){
 
 void ofApp::audioOut(float *output,int buffer_size,int nchannels){
 
+
+	if(recording) return;
+
+	//sfx
+	//for(int j=0;j<1;++j){
+		if(sound_fx[0].isLoaded()){
+			
+			ofSoundBuffer fxbuf;
+			int fx_read=sound_fx[0].readTo(fxbuf,buffer_size);
+			if(fx_read==0) sound_fx[0].setPlay(false);
+			
+			for(int i=0;i<buffer_size;++i){
+				int r=ofClamp(i,0,fxbuf.size()-1);
+				output[i*nchannels]=fxbuf[r]*.2;
+				output[i*nchannels+1]=fxbuf[r]*.2;
+			}
+		}
+	//}
+	
+
 	if(!playing) return;
 	
+
 	if(sound_file==NULL){
 		ofLog()<<"null file!";
 		stopPlayRecord();
@@ -497,10 +545,12 @@ void ofApp::audioOut(float *output,int buffer_size,int nchannels){
 	}
 	read_record++;
 	calcVolume(output,buffer_size,nchannels);
-
+	
+	for(int k=0;k<buffer_size;++k){
+		output[k*nchannels]*=Param::val()->output_vol;
+		output[k*nchannels+1]*=Param::val()->output_vol;
+	}
 }
-
-
 //-----------------------------------------------------------------------
 // mode
 //-----------------------------------------------------------------------
@@ -590,6 +640,7 @@ void ofApp::onTransitionEnd(int &e){
 		switch(mode){
 			case HINT:
 				hint_timer.restart();
+				//sound_fx[1].setPlay(true);
 				break;
 			case REC:
 				count_timer.restart();
@@ -614,8 +665,10 @@ void ofApp::onTransitionEnd(int &e){
 
 void ofApp::onHintTimerEnd(int &num){
 	ofLog()<<"num "<<num;
-	if(num==2){
+	if(num>=2){
 		closeMode(MODE::REC);
+	}else{
+		//sound_fx[2].setPlay(true);
 	}
 }
 void ofApp::onCountTimerEnd(int &num){
@@ -626,6 +679,7 @@ void ofApp::onCountTimerEnd(int &num){
 		count_timer.stop();
 		stopRecord();
 		blink_timer.restart();
+		//sound_fx[3].setPlay(true);
 	}
 }
 void ofApp::onBlinkTimerEnd(int &num){
@@ -633,6 +687,8 @@ void ofApp::onBlinkTimerEnd(int &num){
 	if(num==3){
 		if(!record_once) closeMode(MODE::FINISH);
 		else closeMode(MODE::QRCODE);
+	}else{
+	//	sound_fx[2].setPlay(true);
 	}
 }
 
@@ -649,6 +705,9 @@ void ofApp::exit(){
 	if(sound_file){
 		sound_file->close();
 		delete sound_file;
+	}
+	for(int i=0;i<4;++i){
+		sound_fx[i].close();
 	}
 
 	ofSoundStreamClose();

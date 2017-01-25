@@ -42,6 +42,10 @@ ofxSoundFile::ofxSoundFile() {
     bCompressed = false;
     bLoaded = false;
 
+//reng070125
+	playing=false;
+
+
 #ifdef OF_USING_SNDFILE
 	sndFile = NULL;
 #endif
@@ -410,4 +414,21 @@ bool ofxSoundFile::mpg123ReadFile(ofSoundBuffer & buffer){
 
 	return true;
 }
+
 #endif
+
+//reng070125
+void ofxSoundFile::setPlay(bool play_){
+	if(play_){
+		seekTo(0);
+		playing=true;
+	}else{
+		playing=false;
+	}
+}
+bool ofxSoundFile::isPlaying(){
+	return playing;
+}
+
+
+

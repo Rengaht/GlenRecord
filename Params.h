@@ -1,6 +1,5 @@
 #ifndef PARAM_H
 #define PARAM_H
-
 #include "ofMain.h"
 #include "ofxXmlSettings.h"
 
@@ -22,6 +21,9 @@ public:
 	
 	int osc_port;
 	float sound_scale;
+	
+	float output_vol;
+	float screen_offsetx;
 
 
 	Param(){
@@ -51,6 +53,9 @@ public:
 		
 		osc_port=_param.getValue("OSC_PORT",12000);
 		sound_scale=_param.getValue("SOUND_SCALE",1.0);
+		
+		output_vol=_param.getValue("OUTPUT_VOL",0.5);
+		screen_offsetx=_param.getValue("SCREEN_OFFSETX",0);
 
 		if(!file_exist) saveParam();
 	}
@@ -68,7 +73,8 @@ public:
 		_xml.setValue("OSC_PORT",osc_port);
 		
 		_xml.setValue("SOUND_SCALE",sound_scale);
-
+		_xml.setValue("OUTPUT_VOL",output_vol);
+		_xml.setValue("SCREEN_OFFSETX",screen_offsetx);
 		_xml.save(FileName);
 
 		ofLog()<<"Param file saved!";
