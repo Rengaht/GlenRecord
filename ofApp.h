@@ -120,11 +120,14 @@ class ofApp : public ofBaseApp{
 
 	//	FrameTimer front_timer;
 		FrameTimer hint_timer;
+		FrameTimer go_timer;
 		FrameTimer count_timer;
 		FrameTimer blink_timer;
 		FrameTimer glow_timer;
 		
 		void onHintTimerEnd(int &data);
+		void onGoTimerEnd(int &data);
+
 		void onCountTimerEnd(int &data);
 		void onBlinkTimerEnd(int &data);
 

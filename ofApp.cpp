@@ -8,7 +8,7 @@ void ofApp::setup(){
 	qrcode_timer=FrameTimer(Param::val()->qrcode_time*1000,0);
 	qrcode_timer.setContinuous(false);
 
-	breath_timer=FrameTimer(1500);
+	breath_timer=FrameTimer(2500);
 	breath_timer.restart();
 
 	cur_millis=ofGetElapsedTimeMillis();
@@ -43,7 +43,12 @@ void ofApp::setup(){
 	}
 	
 	hint_timer=FrameTimer(3000);
+	hint_timer.setContinuous(false);
 	ofAddListener(hint_timer.finish_event,this,&ofApp::onHintTimerEnd);
+	
+	go_timer=FrameTimer(1000);
+	go_timer.setContinuous(false);
+	ofAddListener(go_timer.finish_event,this,&ofApp::onGoTimerEnd);
 	
 	count_timer=FrameTimer(1000);
 	ofAddListener(count_timer.finish_event,this,&ofApp::onCountTimerEnd);
@@ -65,10 +70,10 @@ void ofApp::setup(){
 	//sound_fx[2].load("src/sound/go.wav");
 	//sound_fx[3].load("src/sound/blink.wav");
 	
-	out_sound_stream.printDeviceList();
-	out_sound_stream.setup(this,2,1,SAMPLE_RATE,BUFFER_SIZE,4);
+	 out_sound_stream.printDeviceList();
+	 out_sound_stream.setup(this,2,1,SAMPLE_RATE,BUFFER_SIZE,4);
 	//out_sound_stream.stop();
-	
+
 	startMode(MODE::SLEEP);
 //	writeSerial("a");
 }
@@ -78,7 +83,7 @@ void ofApp::update(){
 	
 	float dm=ofGetElapsedTimeMillis()-cur_millis;
 	cur_millis+=dm;
-	beat.update(cur_millis);
+//	beat.update(cur_millis);
 //	breath_timer.update(dm);
 
 	if(recording || playing){
@@ -88,7 +93,7 @@ void ofApp::update(){
 
 		writeSerial(ofToString(int(ofClamp(scaled_vol,160.0,255.0))));
 	}else if(mode==MODE::SLEEP){
-		writeSerial(ofToString(int(255.0*sin(3.14*breath_timer.val()))));
+		writeSerial(ofToString(160+int(95.0*sin(3.14*breath_timer.val()))));
 	}
 
 	//if(scaled_vol<40) scaled_vol=0;
@@ -119,6 +124,7 @@ void ofApp::update(){
 			break;
 		case HINT:
 			hint_timer.update(dm);
+			go_timer.update(dm);
 			break;
 		case REC:
 			//rec_timer.update(dm);
@@ -220,8 +226,9 @@ void ofApp::handleOsc(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	ofSetBackgroundColor(0);
-	
+	ofSetBackgroundColor(255);
+//	front_image[0].draw(0,0,676,480);
+
 //	back_video.draw(0,0);
 //	front_video[0].draw(0,0);
 
@@ -256,10 +263,23 @@ void ofApp::draw(){
 	ofPopStyle();
 */
 
+	float h=480;
+	float w=h*1.2;
+	float offx=ofGetHeight()/2.0-w/2.0+Param::val()->screen_offsetx;
+	
+	ofPushMatrix();
+	ofTranslate(0,offx+w);
+	ofRotateZ(-90);
+	
+	
 
 	float t_=transition_timer.eval();
 	if(mode==next_mode) drawMode(mode,t_,false);
 	else drawMode(mode,1.0f-t_,true);
+	
+
+
+	ofPopMatrix();
 
 }
 
@@ -267,10 +287,8 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
 	float h=480;
 	float w=h*1.2;
-	float offx=ofGetWidth()/2.0-w/2.0+Param::val()->screen_offsetx;
 
 	ofPushMatrix();
-	ofTranslate(offx,0);
 
 	back_seq.getCurFrame().draw(0,0,h*1.2,h);
 	
@@ -295,12 +313,16 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			break;
 		case HINT:
 			ofPushStyle();
-			if(fade_out) ofSetColor(255.0);
+			if(fade_out) ofSetColor(255.0,180);
+			else ofSetColor(255.0,180.0*t);
 				front_image[0].draw(0,0,w,h);
 			ofPopStyle();
 
 			if(!fade_in && !fade_out){
-				tt*=1.0-hint_timer.eval();
+				
+				if(hint_timer.val()<1) tt*=1.0-hint_timer.eval();
+				else tt*=1.0-go_timer.eval();
+
 				ofPushStyle();
 					ofSetColor(255,255.0*tt);
 					front_image[hint_timer.num()+1].draw(0,0,w,h);
@@ -309,7 +331,8 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			break;
 		case REC:
 			ofPushStyle();
-			if(fade_in) ofSetColor(255.0);
+			if(fade_in) ofSetColor(255.0,180);
+			else ofSetColor(255.0,180.0*t);
 				front_image[0].draw(0,0,w,h);
 			ofPopStyle();
 
@@ -389,22 +412,13 @@ void ofApp::calcVolume(float *data,int buffer_size,int nchannels){
 	float cur_vol=0;
 	for(int i=0;i<buffer_size;++i){
 	 	cur_vol+=data[i]*data[i]*Param::val()->sound_scale;
-	//	record_float.push_back(data[i]);
 	}
-//	read_record++;
 
 	cur_vol/=(float)buffer_size;
 	cur_vol=sqrt(cur_vol);
 	smooth_vol*=0.8;
 	smooth_vol+=0.2*cur_vol;
 	
-//	delete data;
-//	data=NULL;
-
-
-	//record.insert(record.begin(),smooth_vol);
-	//if(record.size()>8) record.pop_back();
-//	cout<<record[record.size()-1]<<endl;
 
 
 	//BmFFT::getSimpleSpectrum(BUFFER_SIZE,data,band_volume);
@@ -419,18 +433,13 @@ void ofApp::startRecord(){
 	
 	ofLog()<<"Start!";
 	
-	//record_float.clear();
-//	vector<float>().swap(record_float);
-//	read_record=0;
 
 	cur_id=createId();
 	string path_="audio_"+cur_id+".wav";
-	//string path_="audio.wav";
 	audio_recorder.setup(path_);
 	audio_recorder.setFormat(SF_FORMAT_WAV|SF_FORMAT_PCM_16);
 	
 
-	//last_record=path_;
 	recording=true;
 
 
@@ -510,10 +519,12 @@ void ofApp::audioOut(float *output,int buffer_size,int nchannels){
 			int fx_read=sound_fx[0].readTo(fxbuf,buffer_size);
 			if(fx_read==0) sound_fx[0].setPlay(false);
 			
-			for(int i=0;i<buffer_size;++i){
-				int r=ofClamp(i,0,fxbuf.size()-1);
-				output[i*nchannels]=fxbuf[r]*.2;
-				output[i*nchannels+1]=fxbuf[r]*.2;
+			if(sound_fx[0].isPlaying()){
+				for(int i=0;i<buffer_size;++i){
+					int r=ofClamp(i,0,fxbuf.size()-1);
+					output[i*nchannels]=fxbuf[r]*.2*Param::val()->output_vol;
+					output[i*nchannels+1]=fxbuf[r]*.2*Param::val()->output_vol;
+				}
 			}
 		}
 	//}
@@ -612,9 +623,6 @@ void ofApp::startMode(MODE mode_){
 		case QRCODE:
 			//writeSerial("b");
 			writeSerial(ofToString(255));
-			//uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
-			//back_seq.setIndex(688);
-			//back_seq.setPause(true);
 			qrcode_timer.restart();
 			break;
 		case STORED:
@@ -654,7 +662,7 @@ void ofApp::onTransitionEnd(int &e){
 				qrcode.clear();
 				qrcode.fetch(Param::val()->share_url+"?id="+cur_id,200);
 				qrcode.load("qrcode.jpg");
-
+				
 				break;
 			case STORED:
 				break;
@@ -664,12 +672,13 @@ void ofApp::onTransitionEnd(int &e){
 }
 
 void ofApp::onHintTimerEnd(int &num){
-	ofLog()<<"num "<<num;
-	if(num>=2){
-		closeMode(MODE::REC);
-	}else{
-		//sound_fx[2].setPlay(true);
-	}
+	go_timer.restart();
+	hint_timer.stop();
+}
+void ofApp::onGoTimerEnd(int &num){
+	
+	closeMode(MODE::REC);
+	go_timer.stop();
 }
 void ofApp::onCountTimerEnd(int &num){
 
