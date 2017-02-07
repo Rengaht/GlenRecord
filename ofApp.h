@@ -75,7 +75,7 @@ class ofApp : public ofBaseApp{
 		int readSerial();
 		void writeSerial(string val_);
 
-		enum MODE{SLEEP,HINT,REC,BLINK,FINISH,QRCODE,STORED,PLAY};
+		enum MODE{SLEEP,HINT,REC,BLINK,FINISH,QRCODE,STORED,PLAY,DINO};
 		MODE mode;
 		MODE next_mode;
 		bool playing;
@@ -134,4 +134,8 @@ class ofApp : public ofBaseApp{
 
 		ofxSoundFile sound_fx[1];
 		
+
+		ImageSeq dino_seq;
+		FrameTimer jump_timer;
+
 };

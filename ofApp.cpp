@@ -42,6 +42,9 @@ void ofApp::setup(){
 		count_image[i].load("src/count_"+ofToString(i)+".png");
 	}
 	
+	dino_seq=ImageSeq("src/dinosaure/",3,6,2,".png");
+
+
 	hint_timer=FrameTimer(3000);
 	hint_timer.setContinuous(false);
 	ofAddListener(hint_timer.finish_event,this,&ofApp::onHintTimerEnd);
@@ -58,6 +61,8 @@ void ofApp::setup(){
 	
 	glow_timer=FrameTimer(2000);
 	
+	jump_timer=FrameTimer(500);
+	jump_timer.setContinuous(false);
 	
 
 	transition_timer=FrameTimer(1000);
@@ -73,8 +78,11 @@ void ofApp::setup(){
 	 out_sound_stream.printDeviceList();
 	 out_sound_stream.setup(this,2,1,SAMPLE_RATE,BUFFER_SIZE,4);
 	//out_sound_stream.stop();
+	
 
+	next_mode=MODE::SLEEP;
 	startMode(MODE::SLEEP);
+
 //	writeSerial("a");
 }
 
@@ -101,6 +109,8 @@ void ofApp::update(){
 
 	int key_=readSerial();
 	if(key_==4) resetSleep();
+	if(key_==7) closeMode(MODE::DINO);
+
 	handleOsc();
 
 	//if(mode!=MODE::QRCODE) back_video.update();
@@ -175,6 +185,16 @@ void ofApp::update(){
 					sound_fx[0].setPlay(true);
 				}
 			break;
+		case DINO:
+			dino_seq.update(dm);
+			jump_timer.update(dm);
+			if(key_==1){
+				jump_timer.restart();
+			}else if(key_==2){
+				
+			}
+			break;
+
 	}
 	
 	
@@ -265,7 +285,7 @@ void ofApp::draw(){
 
 	float h=480;
 	float w=h*1.2;
-	float offx=ofGetHeight()/2.0-w/2.0+Param::val()->screen_offsetx;
+	float offx=Param::val()->screen_offsetx;
 	
 	ofPushMatrix();
 	ofTranslate(0,offx+w);
@@ -290,7 +310,8 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
 	ofPushMatrix();
 
-	back_seq.getCurFrame().draw(0,0,h*1.2,h);
+	if(mode_==MODE::DINO) ofSetBackgroundColor(255);
+	else back_seq.getCurFrame().draw(0,0,h*1.2,h);
 	
 	
 	ofPushStyle();
@@ -382,6 +403,17 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			//qrcode_back.draw(0,0,width,height);
 			//ofDrawBitmapString("STORE, white to play",20,20);
 			break;
+		case DINO:
+			ofPushStyle();
+			ofSetColor(255,200*t);
+			
+			float jt=sin(3.1416*jump_timer.val());
+			ofPushMatrix();
+			ofTranslate(267,240.0-40.0*jt);
+				dino_seq.getCurFrame().draw(0,0,42,45);
+			ofPopMatrix();
+
+			ofPopStyle();
 	}
 
 	//ofDrawBitmapString(ofToString(ofGetFrameRate()),10,10);
@@ -569,6 +601,9 @@ void ofApp::closeMode(MODE next_mode_){
 	ofLog()<<mode<<"->"<<next_mode_;
 
 	back_seq.setPause(true);
+	
+	stopRecord();
+	stopPlayRecord();
 
 	switch(mode){
 		case SLEEP:
@@ -590,6 +625,10 @@ void ofApp::closeMode(MODE next_mode_){
 			break;
 		case STORED:
 		case PLAY:
+			break;
+		case DINO:
+			dino_seq.setPause(true);
+			jump_timer.stop();
 			break;
 	}
 	next_mode=next_mode_;
@@ -630,6 +669,11 @@ void ofApp::startMode(MODE mode_){
 			//back_seq.setIndex(697);
 			break;
 		case PLAY:
+			break;
+		case DINO:
+			jump_timer.reset();
+			dino_seq.reset();
+			dino_seq.start();
 			break;
 	}
 	//back_seq.setPause(false);
@@ -704,7 +748,12 @@ void ofApp::onBlinkTimerEnd(int &num){
 
 
 void ofApp::resetSleep(){
-	closeMode(MODE::SLEEP);
+	
+	if(mode!=MODE::SLEEP) closeMode(MODE::SLEEP);
+	
+	stopRecord();
+	stopPlayRecord();
+
 	//rec_timer.reset();
 	//finish_timer.reset();
 	//qrcode_timer.reset();
