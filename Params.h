@@ -14,7 +14,7 @@ public:
 	int finish_time;
 	int qrcode_time;
 
-	int machine_id;
+//	int machine_id;
 	string last_record;
 	string upload_url;
 	string share_url;
@@ -24,7 +24,8 @@ public:
 	
 	float output_vol;
 	float screen_offsetx;
-
+	
+	string machine_id;
 
 	Param(){
 		readParam();
@@ -46,7 +47,7 @@ public:
 		qrcode_time=_param.getValue("QRCODE_TIME",120);
 	
 
-		machine_id=_param.getValue("MACHINE_ID",0);
+//		machine_id=_param.getValue("MACHINE_ID",0);
 		last_record=_param.getValue("LAST_RECORD","");	
 		upload_url=_param.getValue("UPLOAD_URL","");
 		share_url=_param.getValue("SHARE_URL","");
@@ -57,8 +58,37 @@ public:
 		output_vol=_param.getValue("OUTPUT_VOL",0.5);
 		screen_offsetx=_param.getValue("SCREEN_OFFSETX",0);
 
+		machine_id=_param.getValue("MACHINE_ID","");
+		readIpData();	
+
+
 		if(!file_exist) saveParam();
 	}
+	void readIpData(){
+		
+		ifstream fin;
+		fin.open(ofToDataPath("ip.data").c_str());
+		vector<string> data;
+		while(fin!=NULL){
+			string str;
+			getline(fin,str);
+			data.push_back(str);
+		}
+
+		for(auto s:data){
+			int begin=s.find("inet addr:");
+			int end=s.find("Bcast:");
+			if(begin!=std::string::npos && end!=std::string::npos){
+				string tmp=s.substr(begin+11,end-begin-13);
+				ofLog()<<"Get Machine IP: "<<tmp;
+				int last=tmp.find_last_of(".");
+				machine_id=tmp.substr(last+1);
+				ofLog()<<"Machine ID=_m"<<machine_id<<"_";
+			}
+		}
+
+	}
+
 	void saveParam(){
 		ofxXmlSettings _xml;
 		_xml.setValue("REC_TIME",rec_time);
@@ -66,7 +96,6 @@ public:
 		_xml.setValue("FINISH_TIME",finish_time);
 		_xml.setValue("QRCODE_TIME",qrcode_time);
 
-		_xml.setValue("MACHINE_ID",machine_id);
 		_xml.setValue("LAST_RECORD",last_record);
 		_xml.setValue("UPLOAD_URL",upload_url);
 		_xml.setValue("SHARE_URL",share_url);	
@@ -75,6 +104,8 @@ public:
 		_xml.setValue("SOUND_SCALE",sound_scale);
 		_xml.setValue("OUTPUT_VOL",output_vol);
 		_xml.setValue("SCREEN_OFFSETX",screen_offsetx);
+		_xml.setValue("MACHINE_ID",machine_id);
+		
 		_xml.save(FileName);
 
 		ofLog()<<"Param file saved!";

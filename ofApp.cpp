@@ -22,7 +22,7 @@ void ofApp::setup(){
 	
 
 
-	serial.setup("/dev/ttyACM0",9600);
+	serial.setup("/dev/ttyUSB0",9600);
 	if(serial.isInitialized()) ofLog()<<"Serial Initialized!!";
 	else ofLog()<<"Serial Fail!";
 	
@@ -226,7 +226,7 @@ void ofApp::handleOsc(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	ofSetBackgroundColor(255);
+	ofSetBackgroundColor(0);
 //	front_image[0].draw(0,0,676,480);
 
 //	back_video.draw(0,0);
@@ -314,7 +314,6 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 		case HINT:
 			ofPushStyle();
 			if(fade_out) ofSetColor(255.0,180);
-			else ofSetColor(255.0,180.0*t);
 				front_image[0].draw(0,0,w,h);
 			ofPopStyle();
 
@@ -332,8 +331,8 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 		case REC:
 			ofPushStyle();
 			if(fade_in) ofSetColor(255.0,180);
-			else ofSetColor(255.0,180.0*t);
 				front_image[0].draw(0,0,w,h);
+			
 			ofPopStyle();
 
 			if(recording){
@@ -647,7 +646,9 @@ void ofApp::onTransitionEnd(int &e){
 	}else{
 		switch(mode){
 			case HINT:
-				hint_timer.restart();
+				if(record_once) go_timer.restart();
+				else hint_timer.restart();
+
 				//sound_fx[1].setPlay(true);
 				break;
 			case REC:
@@ -751,7 +752,7 @@ void ofApp::uploadFile(string id_,string file_){
 }
 
 string ofApp::createId(){
-	return ofGetTimestampString();
+	return ofGetTimestampString()+"_m"+Param::val()->machine_id+"_";
 }
 
 
