@@ -137,5 +137,15 @@ class ofApp : public ofBaseApp{
 
 		ImageSeq dino_seq;
 		FrameTimer jump_timer;
+		bool dino_dead;
+		ofImage dead_image;
+
+
+		FrameTimer cat_timer[2];
+		ofImage cat_image[3];
+		ofImage over_image;
+		int cat_id[2];
+		float cat_val;
+		
 
 };

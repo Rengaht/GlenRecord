@@ -47,7 +47,7 @@ public:
 		}
 	}
 	float val(){
-		if(!started) return 0;
+		//if(!started) return 0;
 		if(ani_t<0) return 0;
 		if(ani_t>=due) return 1;
 

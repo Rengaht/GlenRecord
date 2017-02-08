@@ -33,7 +33,7 @@ void ofApp::setup(){
 
 	//scene videos
 	back_seq=ImageSeq("src/back/back",119,24,0,".jpg");
-	logo_seq=ImageSeq("src/logo/logo",104,24,0,".png");
+	logo_seq=ImageSeq("src/logo/logo",103,24,0,".png");
 
 	for(int i=0;i<9;++i){
 		front_image[i].load("src/front_"+ofToString(i)+".png");
@@ -43,6 +43,11 @@ void ofApp::setup(){
 	}
 	
 	dino_seq=ImageSeq("src/dinosaure/",3,6,2,".png");
+	for(int i=0;i<3;++i){
+		cat_image[i].load("src/dinosaure/c"+ofToString(i+1)+".png");
+	}
+	over_image.load("src/dinosaure/over.png");
+	dead_image.load("src/dinosaure/005.png");
 
 
 	hint_timer=FrameTimer(3000);
@@ -61,7 +66,7 @@ void ofApp::setup(){
 	
 	glow_timer=FrameTimer(2000);
 	
-	jump_timer=FrameTimer(500);
+	jump_timer=FrameTimer(800);
 	jump_timer.setContinuous(false);
 	
 
@@ -69,6 +74,12 @@ void ofApp::setup(){
 	transition_timer.setContinuous(false);
 	ofAddListener(transition_timer.finish_event,this,&ofApp::onTransitionEnd);
 
+	cat_val=3000.0;
+	for(int i=0;i<2;++i){
+		cat_timer[i]=FrameTimer(cat_val,cat_val*i+cat_val*ofRandom(.5,1.5));
+		cat_timer[i].setContinuous(false);
+		cat_id[i]=(int)ofRandom(0,3);
+	}
 
 	sound_fx[0].load("src/sound/button.wav");
 	//sound_fx[1].load("src/sound/10sec.wav");
@@ -188,10 +199,39 @@ void ofApp::update(){
 		case DINO:
 			dino_seq.update(dm);
 			jump_timer.update(dm);
-			if(key_==1){
-				jump_timer.restart();
-			}else if(key_==2){
+			for(int i=0;i<2;++i){
+				cat_timer[i].update(dm);
+				float val=cat_timer[i].val();
+				if(val==1){
+					cat_timer[i]=FrameTimer(cat_val,cat_val*ofRandom(.5,1.5));
+					cat_timer[i].restart();
+					cat_id[i]=(int)ofRandom(0,3);
+					cat_val*=.98;
+					
+				}else if(val>=0.45 && val<=0.5){
+				//	cout<<"c- "<<val<<"  j-"<<jump_timer.val()<<endl;
+					if(jump_timer.val()<.1 || jump_timer.val()>.9){
+						dino_dead=true;
+						jump_timer.stop();
+						for(int i=0;i<2;++i) cat_timer[i].stop();
+					}
+				}
+			}
+			if(dino_dead){
 				
+				if(key_==2){ //reset game
+					jump_timer.reset();
+					cat_val=3000;
+					for(int i=0;i<2;++i){
+						cat_timer[i]=FrameTimer(cat_val,cat_val*i+cat_val*ofRandom(.5,1.5));
+						cat_timer[i].restart();
+						cat_id[i]=(int)ofRandom(0,3);
+					}
+					dino_dead=false;
+				}
+			
+			}else{
+				if(key_==1) jump_timer.restart();
 			}
 			break;
 
@@ -239,6 +279,9 @@ void ofApp::handleOsc(){
 	if(message_.getAddress()=="/reset"){
 		ofLog()<<"Get RESET!";
 		resetSleep();
+	}
+	if(message_.getAddress()=="/dino"){
+		closeMode(MODE::DINO);
 	}
 	
 }
@@ -405,15 +448,34 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			break;
 		case DINO:
 			ofPushStyle();
-			ofSetColor(255,200*t);
+			
+			for(int i=0;i<2;++i){
+				float val=cat_timer[i].val();
+				if(val>0 && val<1){
+					ofPushMatrix();
+					ofTranslate(536-656.0*val,240);
+					ofScale(.5,.5);
+						cat_image[cat_id[i]].draw(0,0);
+					ofPopMatrix();
+				}
+			}
+			ofPushStyle();
+			ofSetColor(120);
+				ofDrawLine(280,0,675,0);
+			ofPopStyle();
 			
 			float jt=sin(3.1416*jump_timer.val());
 			ofPushMatrix();
 			ofTranslate(267,240.0-40.0*jt);
-				dino_seq.getCurFrame().draw(0,0,42,45);
+				if(!dino_dead) dino_seq.getCurFrame().draw(0,0,42,45);
+				else{
+					dead_image.draw(0,0,42,45);
+					over_image.draw(-172.5,-40);
+				}
 			ofPopMatrix();
 
 			ofPopStyle();
+			break;
 	}
 
 	//ofDrawBitmapString(ofToString(ofGetFrameRate()),10,10);
@@ -674,6 +736,10 @@ void ofApp::startMode(MODE mode_){
 			jump_timer.reset();
 			dino_seq.reset();
 			dino_seq.start();
+			
+			dino_dead=false;			
+			for(int i=0;i<2;++i) cat_timer[i].reset();
+
 			break;
 	}
 	//back_seq.setPause(false);
@@ -710,6 +776,9 @@ void ofApp::onTransitionEnd(int &e){
 				
 				break;
 			case STORED:
+				break;
+			case DINO:
+				for(int i=0;i<2;++i) cat_timer[i].restart();
 				break;
 		}
 	}
