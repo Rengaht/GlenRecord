@@ -26,6 +26,8 @@ public:
 	float screen_offsetx;
 	
 	string machine_id;
+	
+	int sleep_time;
 
 	Param(){
 		readParam();
@@ -45,7 +47,7 @@ public:
 		count_time=_param.getValue("COUNT_TIME",3);
 		finish_time=_param.getValue("FINISH_TIME",5);
 		qrcode_time=_param.getValue("QRCODE_TIME",120);
-	
+		sleep_time=_param.getValue("SLEEP_TIME",120000);
 
 //		machine_id=_param.getValue("MACHINE_ID",0);
 		last_record=_param.getValue("LAST_RECORD","");	
@@ -95,6 +97,7 @@ public:
 		_xml.setValue("COUNT_TIME",count_time);
 		_xml.setValue("FINISH_TIME",finish_time);
 		_xml.setValue("QRCODE_TIME",qrcode_time);
+		_xml.setValue("SLEEP_TIME",sleep_time);
 
 		_xml.setValue("LAST_RECORD",last_record);
 		_xml.setValue("UPLOAD_URL",upload_url);

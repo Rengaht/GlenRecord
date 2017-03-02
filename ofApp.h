@@ -44,6 +44,9 @@ class ofApp : public ofBaseApp{
 		void stopPlayRecord();
 		void resetSleep();
 
+
+		void prepareRecord();
+
 		float smooth_vol;
 		float scaled_vol;
 		
@@ -115,7 +118,7 @@ class ofApp : public ofBaseApp{
 		
 		ImageSeq back_seq;
 		ImageSeq logo_seq;
-		ofImage front_image[9];
+		ofImage front_image[11];
 		ofImage count_image[10];
 
 	//	FrameTimer front_timer;
@@ -124,7 +127,9 @@ class ofApp : public ofBaseApp{
 		FrameTimer count_timer;
 		FrameTimer blink_timer;
 		FrameTimer glow_timer;
-		
+
+		FrameTimer sleep_timer;
+
 		void onHintTimerEnd(int &data);
 		void onGoTimerEnd(int &data);
 
@@ -137,15 +142,22 @@ class ofApp : public ofBaseApp{
 
 		ImageSeq dino_seq;
 		FrameTimer jump_timer;
+		bool dino_start;
 		bool dino_dead;
 		ofImage dead_image;
-
+		ofImage hi_image;
+		ofImage score_image;
+		int dino_score;
 
 		FrameTimer cat_timer[2];
 		ofImage cat_image[3];
 		ofImage over_image;
 		int cat_id[2];
+		bool cat_scored[2];
 		float cat_val;
-		
+	
+		void resetDinoGame();
+		void resetCatTimer(int i);
+		void drawDinoScore(int score);
 
 };

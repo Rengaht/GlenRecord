@@ -35,7 +35,7 @@ void ofApp::setup(){
 	back_seq=ImageSeq("src/back/back",119,24,0,".jpg");
 	logo_seq=ImageSeq("src/logo/logo",103,24,0,".png");
 
-	for(int i=0;i<9;++i){
+	for(int i=0;i<11;++i){
 		front_image[i].load("src/front_"+ofToString(i)+".png");
 	}
 	for(int i=0;i<10;++i){
@@ -48,7 +48,8 @@ void ofApp::setup(){
 	}
 	over_image.load("src/dinosaure/over.png");
 	dead_image.load("src/dinosaure/005.png");
-
+	score_image.load("src/dinosaure/number.png");
+	hi_image.load("src/dinosaure/hi.png");
 
 	hint_timer=FrameTimer(3000);
 	hint_timer.setContinuous(false);
@@ -69,17 +70,13 @@ void ofApp::setup(){
 	jump_timer=FrameTimer(800);
 	jump_timer.setContinuous(false);
 	
+	sleep_timer=FrameTimer(Param::val()->sleep_time);
+	sleep_timer.setContinuous(false);
 
 	transition_timer=FrameTimer(1000);
 	transition_timer.setContinuous(false);
 	ofAddListener(transition_timer.finish_event,this,&ofApp::onTransitionEnd);
 
-	cat_val=3000.0;
-	for(int i=0;i<2;++i){
-		cat_timer[i]=FrameTimer(cat_val,cat_val*i+cat_val*ofRandom(.5,1.5));
-		cat_timer[i].setContinuous(false);
-		cat_id[i]=(int)ofRandom(0,3);
-	}
 
 	sound_fx[0].load("src/sound/button.wav");
 	//sound_fx[1].load("src/sound/10sec.wav");
@@ -144,7 +141,7 @@ void ofApp::update(){
 			}
 			break;
 		case HINT:
-			hint_timer.update(dm);
+			//hint_timer.update(dm);
 			go_timer.update(dm);
 			break;
 		case REC:
@@ -155,17 +152,26 @@ void ofApp::update(){
 		case FINISH:
 			//if(fr>=687) back_seq.setIndex(662);
 			glow_timer.update(dm);
+			sleep_timer.update(dm);
+			if(sleep_timer.val()==1){
+				sleep_timer.reset();
+				closeMode(MODE::SLEEP);
+				return;
+			}
 			if(!transition_ && !recording && !playing){
 				if(key_==1){
+					sleep_timer.restart();
 					if(!record_once){
-						record_once=true;
+						//record_once=true;
 						closeMode(MODE::HINT);
 						sound_fx[0].setPlay(true);
+						prepareRecord();
 					}
 				}else if(key_==2){
+					sleep_timer.restart();
 					playRecord();
 					sound_fx[0].setPlay(true);			
-				}else if(key_==3){
+				}else if(key_==3){					
 					closeMode(MODE::QRCODE);
 					sound_fx[0].setPlay(true);			
 				}
@@ -203,9 +209,7 @@ void ofApp::update(){
 				cat_timer[i].update(dm);
 				float val=cat_timer[i].val();
 				if(val==1){
-					cat_timer[i]=FrameTimer(cat_val,cat_val*ofRandom(.5,1.5));
-					cat_timer[i].restart();
-					cat_id[i]=(int)ofRandom(0,3);
+					resetCatTimer(i);
 					cat_val*=.98;
 					
 				}else if(val>=0.45 && val<=0.5){
@@ -214,22 +218,17 @@ void ofApp::update(){
 						dino_dead=true;
 						jump_timer.stop();
 						for(int i=0;i<2;++i) cat_timer[i].stop();
+					}else{
+						if(!cat_scored[i]){
+					  		dino_score++;
+							cat_scored[i]=true;
+					 	}
 					}
 				}
 			}
-			if(dino_dead){
-				
-				if(key_==2){ //reset game
-					jump_timer.reset();
-					cat_val=3000;
-					for(int i=0;i<2;++i){
-						cat_timer[i]=FrameTimer(cat_val,cat_val*i+cat_val*ofRandom(.5,1.5));
-						cat_timer[i].restart();
-						cat_id[i]=(int)ofRandom(0,3);
-					}
-					dino_dead=false;
-				}
 			
+			if(dino_dead){
+				if(key_==2) resetDinoGame();
 			}else{
 				if(key_==1) jump_timer.restart();
 			}
@@ -331,7 +330,7 @@ void ofApp::draw(){
 	float offx=Param::val()->screen_offsetx;
 	
 	ofPushMatrix();
-	ofTranslate(0,offx+w);
+	ofTranslate(0,800+offx);
 	ofRotateZ(-90);
 	
 	
@@ -383,12 +382,14 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 
 			if(!fade_in && !fade_out){
 				
-				if(hint_timer.val()<1) tt*=1.0-hint_timer.eval();
-				else tt*=1.0-go_timer.eval();
+			//	if(hint_timer.val()<1) tt*=1.0-hint_timer.eval();
+			//	else 
+				tt*=1.0-go_timer.eval();
 
 				ofPushStyle();
 					ofSetColor(255,255.0*tt);
-					front_image[hint_timer.num()+1].draw(0,0,w,h);
+					//front_image[hint_timer.num()+1].draw(0,0,w,h);
+					front_image[2].draw(0,0,w,h);
 				ofPopStyle();
 			}
 			break;
@@ -402,6 +403,7 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			if(recording){
 				tt*=1.0-count_timer.eval();
 				//ofDrawBitmapString("REC",20,20);
+				
 				ofPushStyle();
 					ofSetColor(255,255.0*tt);
 					count_image[(int)ofClamp(9-count_timer.num(),0,9)].draw(0,0,w,h);
@@ -421,9 +423,14 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 			tt*=sin(3.14*glow_timer.val());
 			//ofDrawBitmapString("FINSH",20,20);
 			ofPushStyle();
-				front_image[4].draw(0,0,w,h);
+				if(record_once)	front_image[9].draw(0,0,w,h);
+				else front_image[4].draw(0,0,w,h);
+
 				ofSetColor(255,255.0*tt);
-				front_image[5].draw(0,0,w,h);
+			
+				if(record_once) front_image[10].draw(0,0,w,h); 
+				else front_image[5].draw(0,0,w,h);
+			
 			ofPopStyle();
 			break;
 		case QRCODE: 
@@ -470,8 +477,11 @@ void ofApp::drawMode(MODE mode_,float t,bool fade_out){
 				if(!dino_dead) dino_seq.getCurFrame().draw(0,0,42,45);
 				else{
 					dead_image.draw(0,0,42,45);
-					over_image.draw(-172.5,-40);
+					over_image.draw(-172.5,-80);
 				}
+				ofTranslate(0,-40);
+				drawDinoScore(dino_score);
+				
 			ofPopMatrix();
 
 			ofPopStyle();
@@ -527,14 +537,19 @@ void ofApp::startRecord(){
 	ofLog()<<"Start!";
 	
 
+	recording=true;
+}
+void ofApp::prepareRecord(){
+	
 	cur_id=createId();
+	
+	ofLog()<<"Prepare file: "<<cur_id;
+	
 	string path_="audio_"+cur_id+".wav";
 	audio_recorder.setup(path_);
 	audio_recorder.setFormat(SF_FORMAT_WAV|SF_FORMAT_PCM_16);
 	
-
-	recording=true;
-
+	//recording=true;
 
 }
 void ofApp::stopRecord(){
@@ -667,10 +682,13 @@ void ofApp::closeMode(MODE next_mode_){
 	stopRecord();
 	stopPlayRecord();
 
+	sleep_timer.stop();
+	
 	switch(mode){
 		case SLEEP:
-			record_once=false;
+		//	record_once=false;
 			logo_seq.setPause(true);
+			prepareRecord();
 			break;
 		case REC:
 			count_timer.stop();
@@ -680,6 +698,7 @@ void ofApp::closeMode(MODE next_mode_){
 			hint_timer.stop();
 			break;
 		case FINISH:
+			//sleep_timer.stop();
 			break;
 		case QRCODE:
 			//uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
@@ -694,7 +713,9 @@ void ofApp::closeMode(MODE next_mode_){
 			break;
 	}
 	next_mode=next_mode_;
-	transition_timer.restart();
+	if(next_mode==MODE::REC){ //skip transition 
+		startMode(MODE::REC);	
+	}else transition_timer.restart();
 }
 void ofApp::startMode(MODE mode_){
 	
@@ -702,14 +723,21 @@ void ofApp::startMode(MODE mode_){
 
 	switch(mode_){
 		case SLEEP:
+			
+			record_once=false;
+
 			logo_seq.reset();
 			logo_seq.start();
 			//writeSerial("a");
 			break;
 		case HINT:
+			
+			if(mode==MODE::FINISH) record_once=true;
+
 			writeSerial(ofToString(128));
 			//hint_timer.restart();
 			break;
+		
 		case REC:
 			writeSerial(ofToString(128));
 		//	count_timer.restart();
@@ -719,6 +747,7 @@ void ofApp::startMode(MODE mode_){
 		case FINISH:
 			glow_timer.restart();
 			writeSerial(ofToString(255));
+			sleep_timer.restart();
 			break;
 		case QRCODE:
 			//writeSerial("b");
@@ -734,18 +763,19 @@ void ofApp::startMode(MODE mode_){
 			break;
 		case DINO:
 			jump_timer.reset();
-			dino_seq.reset();
-			dino_seq.start();
 			
-			dino_dead=false;			
-			for(int i=0;i<2;++i) cat_timer[i].reset();
+			resetDinoGame();
 
 			break;
 	}
 	//back_seq.setPause(false);
 
 	mode=mode_;
-	transition_timer.restart();
+	if(mode_==MODE::REC){ //skip transition
+		count_timer.restart();
+		startRecord();
+	}else transition_timer.restart();
+	
 	ofLog()<<"set mode: "<<mode;
 }
 
@@ -754,25 +784,37 @@ void ofApp::onTransitionEnd(int &e){
 	if(next_mode!=mode){
 		startMode(next_mode);
 	}else{
+		ofFile f_;
+
 		switch(mode){
 			case HINT:
-				if(record_once) go_timer.restart();
-				else hint_timer.restart();
+				//if(record_once) 
+					go_timer.restart();
+				//else hint_timer.restart();
 
 				//sound_fx[1].setPlay(true);
 				break;
-			case REC:
+			/*case REC:
 				count_timer.restart();
 				startRecord();
-				break;
+				break;*/
 			case QRCODE:
 				//qrcode_timer.restart();
 				uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
-			
+				
+				f_.open(ofToDataPath("qrcode.jpg"));
+				f_.remove();
+				f_.close();
+
 				cout<<"get qrcode!"<<endl;
 				qrcode.clear();
 				qrcode.fetch(Param::val()->share_url+"?id="+cur_id,200);
-				qrcode.load("qrcode.jpg");
+				
+				f_.open(ofToDataPath("qrcode.jpg"));
+				if(f_.exists()) qrcode.load("qrcode.jpg");
+				else closeMode(MODE::STORED);
+				
+				f_.close();
 				
 				break;
 			case STORED:
@@ -786,8 +828,8 @@ void ofApp::onTransitionEnd(int &e){
 }
 
 void ofApp::onHintTimerEnd(int &num){
-	go_timer.restart();
-	hint_timer.stop();
+	//go_timer.restart();
+	//hint_timer.stop();
 }
 void ofApp::onGoTimerEnd(int &num){
 	
@@ -808,8 +850,9 @@ void ofApp::onCountTimerEnd(int &num){
 void ofApp::onBlinkTimerEnd(int &num){
 	ofLog()<<"blink "<<num;
 	if(num==3){
-		if(!record_once) closeMode(MODE::FINISH);
-		else closeMode(MODE::QRCODE);
+		//if(!record_once) 
+			closeMode(MODE::FINISH);
+		//else closeMode(MODE::QRCODE);
 	}else{
 	//	sound_fx[2].setPlay(true);
 	}
@@ -874,6 +917,41 @@ string ofApp::createId(){
 }
 
 
+//-----------------------------------------------------------------------
+// dino
+//-----------------------------------------------------------------------
+void ofApp::resetDinoGame(){
+	dino_dead=false;			
+	for(int i=0;i<2;++i) cat_timer[i].reset();
+	dino_score=0;
+	
+	dino_seq.reset();
+	dino_seq.start();
+	
+	jump_timer.reset();
+	cat_val=3000;
+	for(int i=0;i<2;++i) resetCatTimer(i);
+	
+}
+void ofApp::resetCatTimer(int i){
+	cat_timer[i]=FrameTimer(cat_val,cat_val*ofRandom(.5,1.5));
+	cat_timer[i].restart();
+	cat_id[i]=(int)ofRandom(0,3);
+	cat_scored[i]=false;
 
 
+}
+void ofApp::drawDinoScore(int score){
+	if(score==0){
+		hi_image.draw(0,0);
+		return;
+	}
+
+	string str=ofToString(score);
+	for(int i=0;i<str.size();++i){
+		int n_=str[i]-'0';
+		score_image.drawSubsection(20*i,0,20,21,20*n_,0);
+	}
+
+}
 
