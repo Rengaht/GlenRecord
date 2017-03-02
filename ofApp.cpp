@@ -720,6 +720,8 @@ void ofApp::closeMode(MODE next_mode_){
 void ofApp::startMode(MODE mode_){
 	
 	back_seq.setPause(false);
+	
+	ofFile f_;
 
 	switch(mode_){
 		case SLEEP:
@@ -752,6 +754,17 @@ void ofApp::startMode(MODE mode_){
 		case QRCODE:
 			//writeSerial("b");
 			writeSerial(ofToString(255));
+			
+			uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
+				
+			f_.open(ofToDataPath("qrcode.jpg"));
+			f_.remove();
+			f_.close();
+
+			cout<<"get qrcode!"<<endl;
+			qrcode.clear();
+			qrcode.fetch(Param::val()->share_url+"?id="+cur_id,200);
+	
 			qrcode_timer.restart();
 			break;
 		case STORED:
@@ -800,15 +813,6 @@ void ofApp::onTransitionEnd(int &e){
 				break;*/
 			case QRCODE:
 				//qrcode_timer.restart();
-				uploadFile(cur_id,ofToDataPath("audio_"+cur_id+".wav",true));	
-				
-				f_.open(ofToDataPath("qrcode.jpg"));
-				f_.remove();
-				f_.close();
-
-				cout<<"get qrcode!"<<endl;
-				qrcode.clear();
-				qrcode.fetch(Param::val()->share_url+"?id="+cur_id,200);
 				
 				f_.open(ofToDataPath("qrcode.jpg"));
 				if(f_.exists()) qrcode.load("qrcode.jpg");
